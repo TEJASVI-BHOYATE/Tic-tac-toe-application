@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Nebula Noughts — Tic Tac Toe</title>
+<style>
+:root{
+--bg:#071028; /* deep space */
+--card: rgba(255,255,255,0.02);
+--glass: rgba(255,255,255,0.03);
+--accentA: #ff7ab6; /* pink */
+--accentB: #7bffdd; /* mint */
+--muted: #9fb0c8;
+--size: min(56vmin,420px);
+--ring: 0 10px 30px rgba(11,20,34,0.6);
+font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+margin:0;padding:28px;display:flex;align-items:center;justify-content:center;min-height:100vh;
+background:
+radial-gradient(800px 300px at 10% 10%, rgba(123,122,255,0.06), transparent),
+radial-gradient(700px 260px at 90% 80%, rgba(123,255,212,0.04), transparent),
+linear-gradient(180deg,#020617,#071028);
+color:#ecf6ff;-webkit-font-smoothing:antialiased;
+}
+
+
+.shell{width:calc(var(--size) + 250px);max-width:980px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border-radius:18px;padding:18px;display:flex;gap:18px;align-items:flex-start;box-shadow:var(--ring);}
+
+
+.board-panel{width:var(--size);padding:16px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,0.015), transparent);border:1px solid rgba(255,255,255,0.03)}
+.meta{display:flex;gap:10px;align-items:center}
+.logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accentA),var(--accentB));display:flex;align-items:center;justify-content:center;font-weight:800;color:#071028}
+.title{font-weight:700}
+.subtitle{font-size:12px;color:var(--muted)}
+
+
+.grid{width:100%;aspect-ratio:1/1;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:8px}
+.cell{background:var(--glass);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:clamp(34px,8vmin,72px);cursor:pointer;user-select:none;position:relative;transition:transform .14s ease,box-shadow .14s ease}
+.cell:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(2,6,23,0.45)}
+
+
+.x{color:var(--accentA);font-weight:800}
+.o{color:var(--accentB);font-weight:800}
+
+
+.controls{width:250px;display:flex;flex-direction:column;gap:12px}
+.panel{background:linear-gradient(180deg, rgba(255,255,255,0.015), transparent);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+.row{display:flex;align-items:center;gap:8px}
+.btn{padding:10px;border-radius:10px;border:0;cursor:pointer;font-weight:700;background:linear-gradient(90deg,var(--accentA),var(--accentB));color:#071028}
+.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px;border-radius:10px;cursor:pointer}
+
+
+.scoreboard{display:flex;justify-content:space-between;gap:8px}
+.score{display:flex;flex-direction:column;align-items:center}
+.num{font-weight:800;font-size:20px}
+.label{font-size:11px;color:var(--muted)}
+
+
+.status{padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);font-weight:700;text-align:center}
+
+
+/* highlight winning cells */
+.win{box-shadow: 0 0 30px rgba(255,255,255,0.06), inset 0 -12px 40px rgba(0,0,0,0.45)}
+/* responsive */
+@media (max-width:940px){.shell{flex-direction:column;width:100%;padding:12px}.controls{width:100%}.board-panel{width:100%}}
+</style>
+</head>
+<body>
+<div class="shell" role="application" aria-label="Nebula Noughts Tic Tac Toe">
+<div class="board-panel">
+<div class="meta" style="justify-content:space-between">
+<div style="display:flex;gap:10px;align-items:center">
+<div class="logo">NN</div>
+<div>
+<div class="title">Nebula Noughts</div>
+<div class="subtitle">a sleek, glowing Tic Tac Toe</div>
+</div>
+</div>
+<div style="text-align:right">
+<div class="subtitle">Unique theme: Pink ↔ Mint</div>
+<div style="font-size:12px;color:var(--muted)">Designed for clarity & fun</div>
+</div>
+</div>
+
+
+<div id="grid" class="grid" role="grid" aria-label="tic tac toe board"></div>
+
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+<div id="status" class="status">Player X's turn</div>
+<div style="display:flex;gap:8px">
+<button id="undo" class="ghost">Undo</button>
+<button id="reset" class="ghost">Reset</button>
+</div>
+</div>
+</div>
+<div class="controls">
+<div class="panel">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div style="font-weight:800">Options</div>
+<div class="subtitle">choose mode & starter</div>
+</div>
+<div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+<button id="pvp" class="ghost">2-player</button>
+<button id="pvc" class="ghost">VS CPU</button>
+</div>
+<div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+<label class="label">Start as</label>
+<button id="startX" class="ghost">X</button>
+<button id="startO" class="ghost">O</button>
+</div>
+</div>
+
+
+<div class="panel">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div style="font-weight:800">Scoreboard</div>
+<div class="subtitle">saved locally</div>
+</div>
+<div class="scoreboard" style="margin-top:10px">
+<div class="score"><div id="scoreX" class="num">0</div><div class="label">X wins</div></div>
+<div class="score"><div id="scoreTie" class="num">0</div><div class="label">Ties</div></div>
+<div class="score"><div id="scoreO" class="num">0</div><div class="label">O wins</div></div>
+</div>
+
+
+<div style="display:flex;gap:8px;margin-top:10px">
+<button id="newGame" class="btn">New Game</button>
+<button id="clearScores" class="ghost">Clear Scores</button>
+</div>
+</div>
+
+
+<div class="panel" style="text-align:center">
+<div style="font-weight:800">Quick Tips</div>
+<div class="subtitle" style="margin-top:6px">Center is powerful. Try to fork when possible.</div>
+</div>
+</div>
+</div>
+
+
+<script>
+// Elements
+const gridEl = document.getElementById('grid');
+const statusEl = document.getElementById('status');
+const scoreXEl = document.getElementById('scoreX');
+const scoreOEl = document.getElementById('scoreO');
+const scoreTieEl = document.getElementById('scoreTie');
+const undoBtn = document.getElementById('undo');
+const resetBtn = document.getElementById('reset');
+const newGameBtn = document.getElementById('newGame');
+const clearScoresBtn = document.getElementById('clearScores');
+const pvpBtn = document.getElementById('pvp');
+const pvcBtn = document.getElementById('pvc');
+const startXBtn = document.getElementById('startX');
+const startOBtn = document.getElementById('startO');
+
+
+// State
+let board = Array(9).fill('');
+let turn = 'X';
+let mode = 'pvp'; // 'pvp' or 'pvc'
+let scores = { X:0, O:0, T:0 };
+let history = [];
+const WIN = [
+[0,1,2],[3,4,5],[6,7,8],
+[0,3,6],[1,4,7],[2,5,8],
+[0,4,8],[2,4,6]
+];
+
+
+// Init
+function init(){
+loadScores();
+renderScores();
+buildGrid();
+bindControls();
+updateStatus();
+}
+
+
+function buildGrid(){
+gridEl.innerHTML='';
+for(let i=0;i<9;i++){
+    const cell = document.createElement('div');
+cell.className='cell';
+cell.setAttribute('role','button');
+cell.setAttribute('aria-label',`cell ${i+1}`);
+cell.tabIndex=0;
+cell.dataset.index=i;
+cell.addEventListener('click', onCellClick);
+cell.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') onCellClick(e) });
+gridEl.appendChild(cell);
+}
+redraw();
+}
+
+
+function onCellClick(e){
+const idx = Number(e.currentTarget.dataset.index);
+if(board[idx] || isGameOver()) return;
+makeMove(idx, turn);
+if(mode==='pvc' && !isGameOver()){
+// small delay to feel natural
+setTimeout(()=>{
+const cpuIdx = bestMove(board, 'O');
+makeMove(cpuIdx, 'O');
+}, 220);
+}
+}
+
+
+function makeMove(idx, player){
+history.push(board.slice());
+board[idx]=player;
+redraw();
+const res = checkWinner(board);
+if(res.winner){
+handleWin(res.winner, res.line);
+} else if(board.every(c=>c)){
+handleTie();
+} else {
+turn = (player==='X')? 'O':'X';
+updateStatus();
+}
+}
+
+
+function isGameOver(){
+return checkWinner(board).winner || board.every(c=>c);
+}
+
+
+function checkWinner(b){
+for(const line of WIN){
+const [a,c,d] = line;
+if(b[a] && b[a]===b[c] && b[a]===b[d]) return { winner: b[a], line };
+}
+return { winner: null };
+}
+
+
+function handleWin(winner, line){
+// highlight
+line.forEach(i=>{ gridEl.children[i].classList.add('win') });
+// score
+scores[winner] = (scores[winner]||0) + 1;
+saveScores(); renderScores();
+statusEl.textContent = `Player ${winner} wins!`;
+}
+
+
+function handleTie(){
+scores.T = (scores.T||0)+1; saveScores(); renderScores();
+statusEl.textContent = `It's a tie!`;
+}
+
+
+function redraw(){
+for(let i=0;i<9;i++){
+const cell = gridEl.children[i];
+cell.classList.remove('x','o','win');
+cell.textContent = board[i]||'';
+if(board[i]) cell.classList.add(board[i].toLowerCase());
+}
+}
+
+
+function updateStatus(){
+if(isGameOver()) return;
+statusEl.textContent = `Player ${turn}'s turn`;
+}
+
+
+// Controls
+function bindControls(){
+undoBtn.addEventListener('click', ()=>{
+if(history.length===0) return;
+board = history.pop();
+redraw();
+if(!isGameOver()){
+turn = board.filter(Boolean).length % 2 === 0 ? 'X' : 'O';
+updateStatus();
+} else {
+updateStatus();
+}
+});
+
+
+resetBtn.addEventListener('click', ()=>{
+history.push(board.slice());
+board = Array(9).fill(''); redraw(); turn = 'X'; updateStatus();
+});
+
+
+newGameBtn.addEventListener('click', ()=>{ board=Array(9).fill(''); history=[]; redraw(); turn='X'; updateStatus(); });
+
+
+clearScoresBtn.addEventListener('click', ()=>{ if(confirm('Clear saved scores?')){ scores={X:0,O:0,T:0}; saveScores(); renderScores(); } });
+pvpBtn.addEventListener('click', ()=>{ mode='pvp'; pvpBtn.classList.add('active'); pvcBtn.classList.remove('active'); pvpBtn.style.background='linear-gradient(90deg,var(--accentA),var(--accentB))'; pvcBtn.style.background='transparent'; pvpBtn.style.color='#071028'; pvcBtn.style.color='var(--muted)'; });
+pvcBtn.addEventListener('click', ()=>{ mode='pvc'; pvcBtn.classList.add('active'); pvpBtn.classList.remove('active'); pvcBtn.style.background='linear-gradient(90deg,var(--accentA),var(--accentB))'; pvpBtn.style.background='transparent'; pvcBtn.style.color='#071028'; pvpBtn.style.color='var(--muted)'; });
+
+
+startXBtn.addEventListener('click', ()=>{ turn='X'; board=Array(9).fill(''); history=[]; redraw(); updateStatus(); });
+startOBtn.addEventListener('click', ()=>{ turn='O'; board=Array(9).fill(''); history=[]; redraw(); updateStatus(); if(mode==='pvc'){ setTimeout(()=>{ const cpuIdx = bestMove(board,'X'); makeMove(cpuIdx,'X') }, 260) } });
+
+
+// keyboard shortcuts
+window.addEventListener('keydown', (e)=>{
+if(e.key==='u') undoBtn.click();
+if(e.key==='r') resetBtn.click();
+});
+}
+
+
+// Scores persistence
+function loadScores(){
+try{
+const raw = localStorage.getItem('nebula-scores');
+if(raw) scores = JSON.parse(raw);
+}catch(e){ scores={X:0,O:0,T:0}; }
+}
+function saveScores(){ localStorage.setItem('nebula-scores', JSON.stringify(scores)); }
+function renderScores(){ scoreXEl.textContent = scores.X||0; scoreOEl.textContent = scores.O||0; scoreTieEl.textContent = scores.T||0; }
+
+
+// Simple Minimax for CPU (player 'O' CPU by default when PVC)
+function bestMove(b, cpu){
+// For performance, if board empty choose center
+if(b.every(c=>c==='')) return 4;
+let bestScore = -Infinity; let move = -1;
+for(let i=0;i<9;i++){
+if(!b[i]){
+    b[i]=cpu;
+let score = minimax(b, 0, false, cpu);
+b[i]='';
+if(score>bestScore){ bestScore=score; move=i }
+}
+}
+return move;
+}
+
+
+function minimax(b, depth, isMaximizing, cpu){
+const res = checkWinner(b);
+if(res.winner){
+if(res.winner===cpu) return 10 - depth;
+else return depth - 10; // opponent win
+}
+if(b.every(c=>c)) return 0; // tie
+
+
+const player = cpu === 'O' ? 'X' : 'O';
+
+
+if(isMaximizing){
+let best = -Infinity;
+for(let i=0;i<9;i++) if(!b[i]){ b[i]=cpu; best = Math.max(best, minimax(b, depth+1, false, cpu)); b[i]='' }
+return best;
+} else {
+let best = Infinity;
+for(let i=0;i<9;i++) if(!b[i]){ b[i]=player; best = Math.min(best, minimax(b, depth+1, true, cpu)); b[i]='' }
+return best;
+}
+}
+
+
+// Start
+init();
+</script>
+</body>
+</html>
